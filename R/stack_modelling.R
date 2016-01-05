@@ -2,7 +2,6 @@
 #'   stacking.R Stacked.SDM.R
 #' @importFrom shiny incProgress
 #' @importFrom raster stack writeRaster
-#' @importFrom parallel mclapply
 NULL
 
 #'Build an SSDM that assembles multiple algorithms and species
@@ -355,30 +354,66 @@ stack_modelling = function(algorithms,
   # Ensemble models creation
   if(verbose){cat('#### Ensemble models creation ##### \n\n')}
   species = levels(as.factor(Occurrences[,which(names(Occurrences) == Spcol)]))
-  enms = parallel::mclapply(species,
-                            function(species){
-                                enm.name = paste0(species)
-                                Spoccurrences = subset(Occurrences, Occurrences[which(names(Occurrences) == Spcol)] == species)
-                                if(verbose){cat('Ensemble modelling :', enm.name, '\n\n')}
-                                enm = try(ensemble_modelling(algorithms, Spoccurrences, Env,
-                                                             Xcol, Ycol, Pcol, rep = rep, name = enm.name, save = F, path = path,
-                                                             PA = PA, cv = cv, cv.param = cv.param, thresh = thresh, metric = metric,
-                                                             axes.metric = axes.metric, uncertainty = uncertainty, tmp = tmp,
-                                                             ensemble.metric = ensemble.metric, ensemble.thresh = ensemble.thresh,
-                                                             weight = weight, verbose = verbose, GUI = F, ...))
-                                if(GUI) {incProgress(1/(length(levels(as.factor(Occurrences[,which(names(Occurrences) == Spcol)])))+1),
-                                                     detail = paste(species,' ensemble SDM built'))}
-                                if (inherits(enm, "try-error")) {if(verbose){cat(enm)}} else {
-                                  if (tmp && !is.null(enm)) {
-                                    enm@projection = writeRaster(enm@projection[[1]], paste0(path, '/.enms/proba',enm.name), overwrite = T)
-                                    enm@uncertainty = writeRaster(enm@uncertainty, paste0(path, '/.enms/uncert',enm.name), overwrite = T)
-                                  }
-                                  if(verbose){cat('\n\n')}
-                                }
-                              return(enm)
-                            },
-                            mc.cores = cores
-  )
+
+  # Parallel computing
+  if(cores > 1){
+    cl = parallel::makeCluster(cores, outfile = "")
+#     varlist = c('algorithms', 'Occurrences', 'Env',
+#                 'Xcol', 'Ycol', 'Pcol', 'Spcol', 'rep','path',
+#                 'PA', 'cv', 'cv.param', 'thresh', 'metric',
+#                 'axes.metric', 'uncertainty', 'tmp',
+#                 'ensemble.metric', 'ensemble.thresh',
+#                 'weight', 'verbose', names(list(...)))
+    parallel::clusterExport(cl, varlist=c(lsf.str(envir = globalenv()), ls(envir = environment())), envir = environment())
+    enms = parallel::parLapply(cl, species,
+                               function(species){
+                                 enm.name = species
+                                 Spoccurrences = subset(Occurrences, Occurrences[which(names(Occurrences) == Spcol)] == species)
+                                 if(verbose){cat('Ensemble modelling :', enm.name, '\n\n')}
+                                 enm = try(ensemble_modelling(algorithms, Spoccurrences, Env,
+                                                              Xcol, Ycol, Pcol, rep = rep, name = enm.name, save = F, path = path,
+                                                              PA = PA, cv = cv, cv.param = cv.param, thresh = thresh, metric = metric,
+                                                              axes.metric = axes.metric, uncertainty = uncertainty, tmp = tmp,
+                                                              ensemble.metric = ensemble.metric, ensemble.thresh = ensemble.thresh,
+                                                              weight = weight, verbose = verbose, GUI = F, ...))
+                                 if(GUI) {incProgress(1/(length(levels(as.factor(Occurrences[,which(names(Occurrences) == Spcol)])))+1),
+                                                      detail = paste(species,' ensemble SDM built'))}
+                                 if (inherits(enm, "try-error")) {if(verbose){cat(enm)}} else {
+                                   if (tmp && !is.null(enm)) {
+                                     enm@projection = writeRaster(enm@projection[[1]], paste0(path, '/.enms/proba',enm.name), overwrite = T)
+                                     enm@uncertainty = writeRaster(enm@uncertainty, paste0(path, '/.enms/uncert',enm.name), overwrite = T)
+                                   }
+                                   if(verbose){cat('\n\n')}
+                                 }
+                                 return(enm)
+                               }
+                               )
+    stopCluster(cl)
+  } else {
+    enms = lapply(species,
+                  function(species){
+                    enm.name = species
+                    Spoccurrences = subset(Occurrences, Occurrences[which(names(Occurrences) == Spcol)] == species)
+                    if(verbose){cat('Ensemble modelling :', enm.name, '\n\n')}
+                    enm = try(ensemble_modelling(algorithms, Spoccurrences, Env,
+                                                 Xcol, Ycol, Pcol, rep = rep, name = enm.name, save = F, path = path,
+                                                 PA = PA, cv = cv, cv.param = cv.param, thresh = thresh, metric = metric,
+                                                 axes.metric = axes.metric, uncertainty = uncertainty, tmp = tmp,
+                                                 ensemble.metric = ensemble.metric, ensemble.thresh = ensemble.thresh,
+                                                 weight = weight, verbose = verbose, GUI = F, ...))
+                    if(GUI) {incProgress(1/(length(levels(as.factor(Occurrences[,which(names(Occurrences) == Spcol)])))+1),
+                                         detail = paste(species,' ensemble SDM built'))}
+                    if (inherits(enm, "try-error")) {if(verbose){cat(enm)}} else {
+                      if (tmp && !is.null(enm)) {
+                        enm@projection = writeRaster(enm@projection[[1]], paste0(path, '/.enms/proba',enm.name), overwrite = T)
+                        enm@uncertainty = writeRaster(enm@uncertainty, paste0(path, '/.enms/uncert',enm.name), overwrite = T)
+                      }
+                      if(verbose){cat('\n\n')}
+                    }
+                    return(enm)
+                  }
+                  )
+  }
   enms = enms[!sapply(enms,is.null)]
 
   # Species stacking

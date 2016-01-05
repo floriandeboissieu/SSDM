@@ -1,3 +1,4 @@
+              stack_modelling parallel with parLapply
 SSDM 0.1.9013 Parallel computing: for loop correctly removed
               load_var tested
 SSDM 0.1.9012 Parallel computing for stack_modelling with parallel::mclapply

@@ -17,26 +17,21 @@ Description: SSDM is a package to map species richness and endemism based on
 License: GPL (>=3) | file LICENSE
 LazyData: TRUE
 Imports:
-    parallel (>= 3.2.2),
-    sp (>= 1.2.0),
-    raster (>= 2.4.20),
-    methods (>= 3.2.2),
-    SDMTools (>= 1.1.221),
-    mgcv (>= 1.8.7),
-    earth (>= 4.4.3),
-    rpart (>= 4.1.10),
-    gbm (>= 2.1.1),
-    randomForest (>= 4.6.10),
-    dismo (>= 1.0.12),
-    nnet (>= 7.3.10),
-    e1071 (>= 1.6.7),
-    shiny (>= 0.12.2),
-    shinydashboard (>= 0.5.1),
-    shinyFiles (>= 0.6.0),
-    gplots (>= 0.1.0),
-    spThin (>= 0.1.0)
+    sp,
+    raster,
+    methods,
+    SDMTools,
+    mgcv,
+    earth,
+    rpart,
+    gbm,
+    randomForest,
+    dismo,
+    nnet,
+    e1071,
+    spThin
 Depends:
-    R (>= 3.2.2)
+    R
 Collate:
     'Algorithm.SDM.R'
     'Ensemble.SDM.R'
